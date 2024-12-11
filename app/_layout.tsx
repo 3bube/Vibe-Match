@@ -47,7 +47,12 @@ export default function RootLayout() {
               <Stack.Screen name="index" options={{ headerShown: false }} />
               <Stack.Screen name="auth" options={{ headerShown: false }} />
               <Stack.Screen name="(profile)" options={{ headerShown: false }} />
-              <Stack.Screen name="(swipe)" />
+              <Stack.Screen name="(swipe)" options={{ headerShown: false }} />
+              <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="(messages)"
+                options={{ headerShown: false }}
+              />
             </Stack>
           </SafeAreaView>
           <StatusBar />

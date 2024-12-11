@@ -1,10 +1,15 @@
 import { supabase } from "../lib/supabase";
 import { uploadFile } from "./upload.utils";
+
 /**
  * Saves the user's profile to the database.
  *
  * @param {string} bio The user's bio.
  * @param {string} mood The user's mood.
+ * @param {string} profilePicture The user's profile picture.
+ * @param {number} age The user's age.
+ * @param {string} name The user's name.
+ * @param {number} radius The user's radius preference.
  * @returns {Promise<void>} A promise that resolves when the profile is saved.
  * @throws {Error} An error if the profile could not be saved.
  */
@@ -12,21 +17,23 @@ export const handleSaveProfile = async (
   bio: string,
   mood: string,
   profilePicture: string,
-  age: number
+  age: number,
+  name: string,
+  radius: number
 ): Promise<void> => {
   const {
     data: { user },
-    error: authError,
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (authError) throw authError;
-  let profilePictureUri: string | null = null;
+  if (userError) throw userError;
+
+  if (!user) throw new Error("No user found");
+
+  let profilePictureUri = null;
 
   if (profilePicture) {
-    profilePictureUri = await uploadFile({
-      uri: profilePicture,
-      bucket: "profile_picture",
-    });
+    profilePictureUri = await uploadFile({ uri: profilePicture });
   }
 
   const { error: profileError } = await supabase.from("profiles").insert({
@@ -35,6 +42,8 @@ export const handleSaveProfile = async (
     mood,
     photo_url: profilePictureUri,
     age,
+    name,
+    radius,
   });
 
   if (profileError) throw profileError;
@@ -78,8 +87,8 @@ export const handleSwipeRight = async (profile: {
 
   // Save like to database
   const { error } = await supabase.from("matches").insert({
-    liker_id: data.user.id,
-    liked_id: profile.id,
+    user1_id: data.user.id,
+    user2_id: profile.id,
   });
   if (error) console.error(error);
 };

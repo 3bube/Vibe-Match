@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TextInput,
@@ -16,6 +16,9 @@ import { handleSaveProfile } from "../../utils/profile.utils";
 import { Picker } from "@react-native-picker/picker";
 import { router } from "expo-router";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { useAuth } from "@/contexts/auth.context";
+import ChatService from "@/services/ChatService";
+import LocationPreferences from "@/components/LocationPreferences";
 
 export default function Profiles() {
   const [bio, setBio] = useState("");
@@ -23,6 +26,36 @@ export default function Profiles() {
   const [age, setAge] = useState("");
   const [profilePicture, setProfilePicture] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [radius, setRadius] = useState(10); // Default radius
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Fetch existing profile data
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return;
+      }
+
+      if (data) {
+        setBio(data.bio || "");
+        setMood(data.mood || "");
+        setAge(data.age?.toString() || "");
+        setProfilePicture(data.photo_url || null);
+        setRadius(data.radius || 10);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -48,16 +81,20 @@ export default function Profiles() {
 
   const handleSubmit = async () => {
     if (!bio || !mood || !age || !profilePicture) {
-      Alert.alert(
-        "Incomplete Profile",
-        "Please fill in all fields and upload a profile picture."
-      );
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     setLoading(true);
     try {
-      await handleSaveProfile(bio, mood, profilePicture, age);
+      await handleSaveProfile(
+        bio,
+        mood,
+        profilePicture,
+        parseInt(age),
+        user.user_metadata.name,
+        radius
+      );
       Alert.alert("Success", "Profile saved successfully!");
       router.push("/(swipe)");
     } catch (error) {
@@ -65,6 +102,7 @@ export default function Profiles() {
       Alert.alert("Error", "Failed to save profile. Please try again.");
     } finally {
       setLoading(false);
+      await ChatService.handleUserLogin(user.id);
     }
   };
 
@@ -133,6 +171,8 @@ export default function Profiles() {
             </Picker>
           </View>
         </View>
+
+        <LocationPreferences radius={radius} onRadiusChange={setRadius} />
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
